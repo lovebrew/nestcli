@@ -10,7 +10,7 @@ pub struct Socket {
 
 impl Drop for Socket {
     fn drop(&mut self) {
-        if let Err(e) = self.stream.shutdown(Shutdown::Both) {
+        if let Err(e) = self.stream.shutdown(Shutdown::Read) {
             eprintln!("Failed to shutdown socket: {}", e);
         }
     }

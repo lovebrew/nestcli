@@ -54,7 +54,16 @@ impl Candidate {
     }
 
     fn command(&self, filepath: &Path, addresses: &[String]) {
-        let binary_path = Path::new(self.search_path).join(self.binary);
+        let base_dir = match std::env::var("DEVKITPRO") {
+            Ok(val) => PathBuf::from(val),
+            Err(_) => {
+                eprintln!("DEVKITPRO environment variable is not set.");
+                return;
+            }
+        };
+
+        let binary_path = base_dir.join(Path::new(self.search_path).join(self.binary));
+        println!("Using addr2line binary at: {}", binary_path.display());
         if which(&binary_path).is_err() {
             eprintln!("Could not find {} in {}", self.binary, self.search_path);
             return;
@@ -81,30 +90,21 @@ impl Candidate {
 static CANDIDATES: &[Candidate] = &[
     Candidate {
         binary: "arm-none-eabi-addr2line",
-        magic: b"3dsx_ctr0.o",
+        magic: b"3dsx_crt0.o",
         args: &["arm"],
-        #[cfg(target_os = "windows")]
-        search_path: "C:\\devkitPro\\devkitARM\\bin",
-        #[cfg(not(target_os = "windows"))]
-        search_path: "/opt/devkitpro/devkitARM/bin",
+        search_path: "devkitARM/bin",
     },
     Candidate {
         binary: "aarch64-none-elf-addr2line",
         magic: b"switch_crt0.o",
         args: &[""],
-        #[cfg(target_os = "windows")]
-        search_path: "C:\\devkitPro\\devkitA64\\bin",
-        #[cfg(not(target_os = "windows"))]
-        search_path: "/opt/devkitpro/devkitA64/bin",
+        search_path: "devkitA64/bin",
     },
     Candidate {
         binary: "powerpc-eabi-addr2line",
         magic: b"crt0_rpx.o",
         args: &[""],
-        #[cfg(target_os = "windows")]
-        search_path: "C:\\devkitPro\\devkitPPC\\bin",
-        #[cfg(not(target_os = "windows"))]
-        search_path: "/opt/devkitpro/devkitPPC/bin",
+        search_path: "devkitPPC/bin",
     },
 ];
 
