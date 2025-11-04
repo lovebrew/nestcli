@@ -1,48 +1,47 @@
 name: Rust
 
 on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+    push:
+        branches: ["main"]
+    pull_request:
+        branches: ["main"]
 
 env:
-  CARGO_TERM_COLOR: always
+    CARGO_TERM_COLOR: always
 
 jobs:
-
     linux:
-      runs-on: ubuntu-latest
-      steps:
-      - uses: actions/checkout@v4
-      - name: Build
-        run: cargo build --verbose --release
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - name: Build
+              run: cargo build --verbose --release
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: linux-x64
-          path: target/release/nestdbg
+            - uses: actions/upload-artifact@v4
+              with:
+                  name: linux-x64
+                  path: target/release/nestcli
 
     windows:
-      runs-on: windows-latest
-      steps:
-        - uses: actions/checkout@v4
-        - name: Build
-          run: cargo build --verbose --release
-        
-        - uses: actions/upload-artifact@v4
-          with:
-            name: windows-x64
-            path: target/release/nestdbg.exe
+        runs-on: windows-latest
+        steps:
+            - uses: actions/checkout@v4
+            - name: Build
+              run: cargo build --verbose --release
+
+            - uses: actions/upload-artifact@v4
+              with:
+                  name: windows-x64
+                  path: target/release/nestcli.exe
 
     macOS:
-      runs-on: macos-latest
-      steps:
-        - uses: actions/checkout@v4
-        - name: Build
-          run: cargo build --verbose --release
+        runs-on: macos-latest
+        steps:
+            - uses: actions/checkout@v4
+            - name: Build
+              run: cargo build --verbose --release
 
-        - uses: actions/upload-artifact@v4
-          with:
-            name: macOS-arm64
-            path: target/release/nestdbg
+            - uses: actions/upload-artifact@v4
+              with:
+                  name: macOS-arm64
+                  path: target/release/nestcli
