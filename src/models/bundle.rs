@@ -61,7 +61,7 @@ impl Bundle {
             includes.push(self.cwd.join(IGNORE_NAME));
         }
 
-        for (_, path) in &config.metadata.icons {
+        for path in config.metadata.icons.values() {
             if Path::new(&self.cwd).join(path).exists() {
                 includes.push(self.cwd.join(path));
             }
