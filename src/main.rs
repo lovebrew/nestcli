@@ -1,82 +1,54 @@
-use clap::{Error, Parser};
-
-use std::{net::Ipv4Addr, path::PathBuf};
-
-mod addr2line;
 mod commands;
 mod config;
-mod output_writer;
-mod socket;
+mod models;
+mod platforms;
+mod prompts;
+mod services;
 
-use commands::{Cli, Command};
-use config::ConnectionConfig;
-use output_writer::OutputWriter;
-use socket::Socket;
+use anyhow::Result;
+use clap::{Parser, Subcommand};
+use commands::{bundle::BundleCmd, conn::ConfigCmd, debug::DebugCmd};
+use config::app::Config;
 
-fn connect_to_target(address: (Ipv4Addr, u16), file: Option<PathBuf>) -> Result<(), Error> {
-    println!("Connecting to target at {}...", address.0);
-    let mut socket = Socket::new(address)?;
+use commands::{bundle::handle_bundle, conn::handle_connection, debug::handle_debug};
 
-    clearscreen::clear().expect("Failed to clear the screen.");
-
-    let mut file = OutputWriter::new(file)?;
-
-    loop {
-        match socket.read() {
-            Ok(data_read) => {
-                if data_read.is_empty() {
-                    break;
-                }
-
-                file.write(data_read)?;
-            }
-            Err(e) => {
-                eprintln!("Failed to read from the socket: {}", e);
-                break;
-            }
-        }
-    }
-
-    Ok(())
+#[derive(Parser)]
+#[command(author="support@lovebrew.org", version, about, long_about = None)]
+#[command(name = "nestcli")]
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
 }
 
-fn main() -> Result<(), Error> {
-    let mut config = ConnectionConfig::load();
+#[derive(Subcommand)]
+enum Commands {
+    /// Add, remove, or list configured target devices
+    #[command(alias = "c")]
+    Config {
+        #[command(subcommand)]
+        command: ConfigCmd,
+    },
+    /// Tools for debugging builds and resolving symbols
+    #[command(alias = "dbg")]
+    Debug {
+        #[command(subcommand)]
+        command: DebugCmd,
+    },
+    /// Bundle utilization commands
+    #[command(alias = "b")]
+    Bundle {
+        #[command(subcommand)]
+        command: BundleCmd,
+    },
+}
 
-    let args = Cli::parse();
+fn main() -> Result<()> {
+    let cli = Cli::parse();
+    let config = Config::load()?;
 
-    match args.command {
-        Command::Add { name, address } => {
-            config.add_connection(&name, address)?;
-            println!("Connection '{}' added for target '{}'.", name, address);
-        }
-        Command::Remove { name } => {
-            if config.remove_connection(&name)? {
-                println!("Connection '{}' removed.", name);
-            } else {
-                eprintln!("No connection found with the name '{}'.", name);
-            }
-        }
-        Command::OpenConfig => {
-            let _ = opener::reveal(&ConnectionConfig::get_filepath()?);
-        }
-        Command::List => config.list_connections(),
-        Command::Connect { target, file } => {
-            if let Some(address) = config.resolve_target(&target) {
-                if connect_to_target(address, file).is_err() {
-                    eprintln!("Failed to connect to the target.");
-                }
-            } else {
-                eprintln!("No connection found for target '{}'.", target);
-            }
-        }
-        Command::Addr2line {
-            filepath,
-            addresses,
-        } => {
-            addr2line::run(&filepath, addresses);
-        }
+    match cli.command {
+        Commands::Config { command } => handle_connection(command, config),
+        Commands::Debug { command } => handle_debug(command, config),
+        Commands::Bundle { command } => handle_bundle(command),
     }
-
-    Ok(())
 }
