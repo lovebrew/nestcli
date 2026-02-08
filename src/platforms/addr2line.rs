@@ -12,6 +12,18 @@ pub struct Candidate {
     args: &'static [&'static str],
     search_path: &'static str,
     device: &'static str,
+    runtime_base: u32,
+    elf_text_base: u32,
+}
+
+impl Candidate {
+    pub fn offset_address(&self, address: &str) -> Result<String> {
+        let value = u32::from_str_radix(address.trim_start_matches("0x"), 16)?;
+        Ok(format!(
+            "0x{:08X}",
+            value - self.runtime_base + self.elf_text_base
+        ))
+    }
 }
 
 const CANDIDATES: [Candidate; 3] = [
@@ -21,6 +33,8 @@ const CANDIDATES: [Candidate; 3] = [
         args: &["arm"],
         search_path: "devkitARM/bin",
         device: "Nintendo 3DS",
+        runtime_base: 0,
+        elf_text_base: 0,
     },
     Candidate {
         binary: "aarch64-none-elf-addr2line",
@@ -28,6 +42,8 @@ const CANDIDATES: [Candidate; 3] = [
         args: &[""],
         search_path: "devkitA64/bin",
         device: "Nintendo Switch",
+        runtime_base: 0,
+        elf_text_base: 0,
     },
     Candidate {
         binary: "powerpc-eabi-addr2line",
@@ -35,6 +51,8 @@ const CANDIDATES: [Candidate; 3] = [
         args: &[""],
         search_path: "devkitPPC/bin",
         device: "Nintendo Wiiᵘ",
+        runtime_base: 0x0C000000,
+        elf_text_base: 0x02000000,
     },
 ];
 
@@ -83,7 +101,7 @@ impl Candidate {
             .arg(filepath);
 
         for address in addresses {
-            command.arg(address);
+            command.arg(self.offset_address(address)?);
         }
 
         let output = match command.output() {
