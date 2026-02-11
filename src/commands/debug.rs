@@ -7,6 +7,7 @@ use std::{
 
 use anyhow::Result;
 use clap::Subcommand;
+use indicatif::{ProgressBar, ProgressStyle};
 
 use crate::config::app::Config;
 use crate::models::socket::Socket;
@@ -26,6 +27,14 @@ pub enum DebugCmd {
     },
 }
 
+fn create_spinner() -> Result<ProgressBar> {
+    let progress_bar = ProgressBar::new_spinner();
+    let template = ProgressStyle::with_template("Attaching... {spinner}")?
+        .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]);
+    progress_bar.set_style(template);
+    Ok(progress_bar)
+}
+
 pub fn handle_debug(command: DebugCmd, config: Config) -> Result<()> {
     match command {
         DebugCmd::Attach { address, logfile } => {
@@ -33,12 +42,19 @@ pub fn handle_debug(command: DebugCmd, config: Config) -> Result<()> {
                 Some(addr) => *addr,
                 None => address.parse::<Ipv4Addr>()?,
             };
-            let mut file = if let Some(path) = logfile {
-                Some(File::create(path)?)
-            } else {
-                None
+            let progress = create_spinner()?;
+            progress.enable_steady_tick(std::time::Duration::from_millis(120));
+            let mut socket = match Socket::new((target, config.get_port())) {
+                Ok(socket) => {
+                    progress.finish_with_message("Attached.");
+                    socket
+                }
+                Err(e) => {
+                    progress.abandon_with_message("Failed to connect.");
+                    return Err(e.into());
+                }
             };
-            let mut socket = Socket::new((target, config.get_port()))?;
+            let mut file = logfile.map(File::create).transpose()?;
             while let Some(data) = socket.read()? {
                 stdout().write_all(data)?;
                 if let Some(f) = file.as_mut() {

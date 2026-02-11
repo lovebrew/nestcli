@@ -21,7 +21,6 @@ impl Drop for Socket {
 impl Socket {
     pub fn new(address: (Ipv4Addr, u16)) -> Result<Self> {
         let stream = TcpStream::connect(address)?;
-        println!("Attaching to remote target at {}", address.0);
         let buffer = vec![0; SOCKET_BUFFER_SIZE];
         Ok(Self { stream, buffer })
     }
